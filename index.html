@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Trị & Thao Tác Kho Thông Minh</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #FAFAFA;
+            color: #09090B;
+        }
+        .tabular-nums {
+            font-variant-numeric: tabular-nums;
+        }
+    </style>
+</head>
+<body class="min-h-screen antialiased bg-[#FAFAFA] text-zinc-950 pb-16">
+    <header class="border-b border-zinc-200 bg-white sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="w-2 h-2 rounded-full bg-zinc-900"></span>
+                <span class="text-sm font-semibold tracking-tight text-zinc-900">Bảng Điều Khiển Quản Trị & Kho Thông Minh</span>
+                <span class="text-zinc-300">/</span>
+                <span class="text-xs text-zinc-500 font-medium">EcommerceSmartWarehouse</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleStream()" id="btn-stream" class="px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition flex items-center gap-1.5">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400" id="stream-dot"></span>
+                    <span id="txt-stream">Bật Tự Động Demo</span>
+                </button>
+                <button onclick="resetAllData()" class="px-3 py-1.5 rounded-md bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-medium transition">
+                    Khôi Phục Dữ Liệu Gốc
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div id="notice-box" class="max-w-7xl mx-auto px-6 pt-4 hidden">
+        <div id="notice-content" class="p-3.5 rounded-md border text-xs font-mono flex items-start justify-between">
+            <div id="notice-text"></div>
+            <button onclick="closeNotice()" class="text-zinc-400 hover:text-zinc-600 text-sm leading-none pl-4">×</button>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+        <div class="bg-white border border-zinc-200 rounded-lg p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 mb-4 border-b border-zinc-100 gap-2">
+                <div>
+                    <h2 class="text-sm font-semibold text-zinc-900">Khu Vực Thao Tác Tồn Kho Thủ Công</h2>
+                    <p class="text-xs text-zinc-500 mt-0.5">Tự chọn kho, mặt hàng và số lượng để kiểm thử trực tiếp Trigger trg_CapNhatTonKhoKhiXacNhan</p>
+                </div>
+                <div class="text-xs text-zinc-500 flex items-center gap-2">
+                    <span>Trạng thái:</span>
+                    <span id="system-mode-tag" class="font-medium text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">Thao tác thủ công</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 text-xs">
+                <div class="p-4 rounded-md border border-zinc-200 bg-zinc-50/50 flex flex-col justify-between space-y-3">
+                    <div>
+                        <div class="flex items-center justify-between pb-2 mb-2 border-b border-zinc-200">
+                            <span class="font-semibold text-zinc-900">1. Xuất Kho / Xác Nhận Đơn</span>
+                            <span class="text-[11px] font-mono text-rose-700 font-medium bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">Trừ Tồn</span>
+                        </div>
+                        <div class="space-y-2.5">
+                            <div>
+                                <label class="block text-zinc-600 mb-1">Chọn Kho Xuất Hàng</label>
+                                <select id="manual-deduct-wh" onchange="updateDeductStockDisplay()" class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1.5 text-zinc-900 text-xs focus:outline-none focus:border-zinc-900">
+                                    <option value="1">Kho Tổng Hà Nội - KCN Đài Tư</option>
+                                    <option value="2">Kho Phía Nam - KCN Tân Bình</option>
+                                    <option value="3">Kho Trung Chuyển Đà Nẵng</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-zinc-600 mb-1">Chọn Biến Thể Sản Phẩm (SKU)</label>
+                                <select id="manual-deduct-sku" onchange="updateDeductStockDisplay()" class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1.5 text-zinc-900 text-xs focus:outline-none focus:border-zinc-900">
+                                </select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 items-center">
+                                <div>
+                                    <label class="block text-zinc-600 mb-1">Số Lượng Xuất</label>
+                                    <input type="number" id="manual-deduct-qty" min="1" value="4" class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1.5 text-zinc-900 font-mono text-xs focus:outline-none focus:border-zinc-900">
+                                </div>
+                                <div>
+                                    <label class="block text-zinc-600 mb-1">Tồn Khả Dụng / Xuất Đi</label>
+                                    <div id="manual-deduct-avail" class="bg-white border border-zinc-200 rounded px-2.5 py-1.5 text-zinc-900 font-mono text-xs font-semibold">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <button onclick="handleManualDeduct()" class="w-full py-2 rounded bg-zinc-900 hover:bg-zinc-800 text-white font-medium transition text-xs">
+                            Thực Hiện Trừ Kho (Duyệt Đơn)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-md border border-zinc-200 bg-zinc-50/50 flex flex-col justify-between space-y-3">
+                    <div>
+                        <div class="flex items-center justify-between pb-2 mb-2 border-b border-zinc-200">
+                            <span class="font-semibold text-zinc-900">2. Nhập Kho Bổ Sung (Restock)</span>
+                            <span class="text-[11px] font-mono text-emerald-700 font-medium bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">+ Tồn Kho</span>
+                        </div>
+                        <div class="space-y-2.5">
+                            <div>
+                                <label class="block text-zinc-600 mb-1">Chọn Kho Nhập</label>
+                                <select id="manual-restock-wh" class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1.5 text-zinc-900 text-xs focus:outline-none focus:border-zinc-900">
+                                    <option value="1">Kho Tổng Hà Nội - KCN Đài Tư</option>
+                                    <option value="2">Kho Phía Nam - KCN Tân Bình</option>
+                                    <option value="3">Kho Trung Chuyển Đà Nẵng</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-zinc-600 mb-1">Chọn Biến Thể Sản Phẩm (SKU)</label>
+                                <select id="manual-restock-sku" class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1.5 text-zinc-900 text-xs focus:outline-none focus:border-zinc-900">
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-zinc-600 mb-1">Số Lượng Nhập Bổ Sung</label>
+                                <input type="number" id="manual-restock-qty" min="1" value="50" class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1.5 text-zinc-900 font-mono text-xs focus:outline-none focus:border-zinc-900">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <button onclick="handleManualRestock()" class="w-full py-2 rounded bg-white border border-zinc-300 hover:bg-zinc-100 text-zinc-900 font-medium transition text-xs">
+                            Tạo Phiếu Nhập Kho
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-4 rounded-md border border-zinc-200 bg-zinc-50/50 flex flex-col justify-between space-y-3">
+                    <div>
+                        <div class="flex items-center justify-between pb-2 mb-2 border-b border-zinc-200">
+                            <span class="font-semibold text-zinc-900">3. Điều Chuyển Kho Liên Điểm</span>
+                            <span class="text-[11px] font-mono text-indigo-700 font-medium bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">Luân Chuyển</span>
+                        </div>
+                        <div class="space-y-2.5">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-zinc-600 mb-1">Kho Xuất</label>
+                                    <select id="manual-trans-from" class="w-full bg-white border border-zinc-200 rounded px-2 py-1.5 text-zinc-900 text-xs">
+                                        <option value="1">Kho Hà Nội</option>
+                                        <option value="2">Kho Phía Nam</option>
+                                        <option value="3">Kho Đà Nẵng</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-zinc-600 mb-1">Kho Nhận</label>
+                                    <select id="manual-trans-to" class="w-full bg-white border border-zinc-200 rounded px-2 py-1.5 text-zinc-900 text-xs">
+                                        <option value="2">Kho Phía Nam</option>
+                                        <option value="1">Kho Hà Nội</option>
+                                        <option value="3">Kho Đà Nẵng</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-zinc-600 mb-1">Biến Thể Cần Chuyển</label>
+                                <select id="manual-trans-sku" class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1.5 text-zinc-900 text-xs">
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-zinc-600 mb-1">Số Lượng Chuyển</label>
+                                <input type="number" id="manual-trans-qty" min="1" value="15" class="w-full bg-white border border-zinc-200 rounded px-2.5 py-1.5 text-zinc-900 font-mono text-xs">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-2">
+                        <button onclick="handleManualTransfer()" class="w-full py-2 rounded bg-white border border-zinc-300 hover:bg-zinc-100 text-zinc-900 font-medium transition text-xs">
+                            Thực Hiện Chuyển Kho
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white border border-zinc-200 rounded-lg p-5">
+                <div class="text-xs font-medium text-zinc-500">Doanh Thu Thuần (Tháng 10/2026)</div>
+                <div class="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 tabular-nums" id="kpi-revenue">1.244.870.000 ₫</div>
+                <div class="mt-1 text-xs text-emerald-700 flex items-center gap-1">
+                    <span class="tabular-nums" id="kpi-revenue-diff">+24,49%</span> so với ngưỡng mục tiêu 1 tỷ
+                </div>
+            </div>
+
+            <div class="bg-white border border-zinc-200 rounded-lg p-5">
+                <div class="text-xs font-medium text-zinc-500">Mốc Đạt Ngưỡng 1 Tỷ VNĐ</div>
+                <div class="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 tabular-nums">20/10/2026</div>
+                <div class="mt-1 text-xs text-zinc-500">
+                    Lũy kế ngày đạt <span class="tabular-nums font-medium text-zinc-700">1.046.170.000 ₫</span>
+                </div>
+            </div>
+
+            <div class="bg-white border border-zinc-200 rounded-lg p-5">
+                <div class="text-xs font-medium text-zinc-500">Tổng Số Lượng Tồn Kho</div>
+                <div class="mt-2 text-2xl font-semibold tracking-tight text-zinc-900 tabular-nums" id="kpi-stock">1.305</div>
+                <div class="mt-1 text-xs text-zinc-500">
+                    5 danh mục cấp 1 (<span class="tabular-nums">2</span> danh mục tồn bằng 0)
+                </div>
+            </div>
+
+            <div class="bg-white border border-zinc-200 rounded-lg p-5">
+                <div class="text-xs font-medium text-zinc-500">Tỷ Lệ Hủy Đơn Cao Nhất</div>
+                <div class="mt-2 text-2xl font-semibold tracking-tight text-rose-600 tabular-nums">25,00%</div>
+                <div class="mt-1 text-xs text-rose-600">
+                    TechZone Official (<span class="tabular-nums">1/4</span> đơn bị hủy)
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-zinc-200 rounded-lg p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 mb-4 border-b border-zinc-100 gap-3">
+                <div>
+                    <h2 class="text-sm font-semibold text-zinc-900">Chi Tiết Tồn Kho Từng Vị Trí (Bảng TonKho)</h2>
+                    <p class="text-xs text-zinc-500 mt-0.5">Bấm các nút -1 hoặc +10 ở cột Thao Tác Nhanh để tăng giảm số lượng trực tiếp</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="text" id="filter-keyword" oninput="renderStockTable()" placeholder="Lọc theo tên SP hoặc SKU..." class="bg-white border border-zinc-200 rounded px-2.5 py-1 text-xs text-zinc-900 focus:outline-none focus:border-zinc-900 w-56">
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs text-left">
+                    <thead class="border-b border-zinc-200 text-zinc-500 uppercase tracking-wider text-[11px]">
+                        <tr>
+                            <th class="pb-2.5 font-medium">Kho Hàng</th>
+                            <th class="pb-2.5 font-medium">Tên Mặt Hàng</th>
+                            <th class="pb-2.5 font-medium">Mã SKU</th>
+                            <th class="pb-2.5 font-medium">Quy Cách</th>
+                            <th class="pb-2.5 font-medium text-right">Đơn Giá</th>
+                            <th class="pb-2.5 font-medium text-right">Số Lượng Tồn (Xuất Đi)</th>
+                            <th class="pb-2.5 font-medium text-center">Trạng Thái</th>
+                            <th class="pb-2.5 font-medium text-right">Thao Tác Nhanh</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stock-tbody" class="divide-y divide-zinc-100">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-8 bg-white border border-zinc-200 rounded-lg p-6">
+                <div class="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100">
+                    <div>
+                        <h2 class="text-sm font-semibold text-zinc-900">Biểu Đồ Doanh Thu Lũy Kế Theo Ngày (Truy Vấn 8)</h2>
+                        <p class="text-xs text-zinc-500 mt-0.5">Sử dụng Window Function SUM() OVER với phân vùng tháng 10/2026</p>
+                    </div>
+                    <button onclick="showSqlModal(8)" class="text-xs text-zinc-500 hover:text-zinc-900 underline font-mono">
+                        Xem SQL
+                    </button>
+                </div>
+                <div class="h-64">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 bg-white border border-zinc-200 rounded-lg p-6 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100">
+                        <div>
+                            <h2 class="text-sm font-semibold text-zinc-900">Tồn Kho Cấp 1 (Truy Vấn 5)</h2>
+                            <p class="text-xs text-zinc-500 mt-0.5">LEFT JOIN & COALESCE</p>
+                        </div>
+                        <button onclick="showSqlModal(5)" class="text-xs text-zinc-500 hover:text-zinc-900 underline font-mono">
+                            Xem SQL
+                        </button>
+                    </div>
+                    <div class="space-y-3.5">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-medium text-zinc-800">Thiết bị điện tử</span>
+                                <span class="tabular-nums text-zinc-600 font-medium" id="cat-stock-1">825 sản phẩm (63,2%)</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
+                                <div id="cat-bar-1" class="h-full bg-zinc-900 rounded-full" style="width: 63.2%;"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-medium text-zinc-800">Thời trang & Phụ kiện</span>
+                                <span class="tabular-nums text-zinc-600 font-medium">300 sản phẩm (23,0%)</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-zinc-900 rounded-full" style="width: 23.0%;"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-medium text-zinc-800">Gia dụng thông minh</span>
+                                <span class="tabular-nums text-zinc-600 font-medium">180 sản phẩm (13,8%)</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-zinc-900 rounded-full" style="width: 13.8%;"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-medium text-zinc-400">Sách & Văn phòng phẩm</span>
+                                <span class="tabular-nums text-zinc-400">0 sản phẩm (0,0%)</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-zinc-300 rounded-full" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span class="font-medium text-zinc-400">Ô tô & Xe máy</span>
+                                <span class="tabular-nums text-zinc-400">0 sản phẩm (0,0%)</span>
+                            </div>
+                            <div class="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-zinc-300 rounded-full" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between text-xs text-zinc-500">
+                    <span>Tổng tồn khả dụng</span>
+                    <span class="font-semibold text-zinc-900 tabular-nums" id="total-stock-count">1.305</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-8 bg-white border border-zinc-200 rounded-lg p-6">
+                <div class="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100">
+                    <div>
+                        <h2 class="text-sm font-semibold text-zinc-900">Doanh Thu Thuần Từng Gian Hàng Trong Tháng 10/2026 (Truy Vấn 3)</h2>
+                        <p class="text-xs text-zinc-500 mt-0.5">Đã trừ chiết khấu Voucher và loại trừ các đơn hủy</p>
+                    </div>
+                    <button onclick="showSqlModal(3)" class="text-xs text-zinc-500 hover:text-zinc-900 underline font-mono">
+                        Xem SQL
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="border-b border-zinc-200 text-zinc-500 uppercase tracking-wider text-[11px]">
+                            <tr>
+                                <th class="pb-2.5 font-medium text-left">Gian Hàng</th>
+                                <th class="pb-2.5 font-medium text-right">Số Đơn</th>
+                                <th class="pb-2.5 font-medium text-right">Tiền Hàng Gốc</th>
+                                <th class="pb-2.5 font-medium text-right">Giảm Voucher</th>
+                                <th class="pb-2.5 font-medium text-right">Doanh Thu Thuần</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100">
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 font-medium text-zinc-900">Apple Authorized Store</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-700">2</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">509.830.000 ₫</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">40.000.000 ₫</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">469.830.000 ₫</td>
+                            </tr>
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 font-medium text-zinc-900">TechZone Official</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-700">3</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">489.390.000 ₫</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">30.000.000 ₫</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">459.390.000 ₫</td>
+                            </tr>
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 font-medium text-zinc-900">SamCenter Vietnam</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-700">1</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">319.900.000 ₫</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">20.000.000 ₫</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">299.900.000 ₫</td>
+                            </tr>
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 font-medium text-zinc-900">Gia Dụng Sunhouse</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-700">1</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">9.250.000 ₫</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">0 ₫</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">9.250.000 ₫</td>
+                            </tr>
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 font-medium text-zinc-900">Thời Trang Aristino</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-700">1</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">6.500.000 ₫</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">0 ₫</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">6.500.000 ₫</td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="border-t border-zinc-200">
+                            <tr>
+                                <td class="pt-3 font-semibold text-zinc-900">Tổng Toàn Sàn</td>
+                                <td class="pt-3 text-right tabular-nums font-semibold text-zinc-900">8</td>
+                                <td class="pt-3 text-right tabular-nums font-semibold text-zinc-900">1.334.870.000 ₫</td>
+                                <td class="pt-3 text-right tabular-nums font-semibold text-zinc-900">90.000.000 ₫</td>
+                                <td class="pt-3 text-right tabular-nums font-semibold text-zinc-900">1.244.870.000 ₫</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="lg:col-span-4 bg-white border border-zinc-200 rounded-lg p-6 flex flex-col justify-between">
+                <div>
+                    <div class="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100">
+                        <div>
+                            <h2 class="text-sm font-semibold text-zinc-900">Cảnh Báo Hủy Đơn (Truy Vấn 4)</h2>
+                            <p class="text-xs text-zinc-500 mt-0.5">Lọc HAVING tỷ lệ hủy > 10%</p>
+                        </div>
+                        <button onclick="showSqlModal(4)" class="text-xs text-zinc-500 hover:text-zinc-900 underline font-mono">
+                            Xem SQL
+                        </button>
+                    </div>
+                    <div class="p-4 rounded-md border border-rose-200 bg-rose-50/50">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-rose-900">TechZone Official</span>
+                            <span class="text-xs font-bold text-rose-700 tabular-nums">25,00% Hủy</span>
+                        </div>
+                        <p class="text-xs text-rose-800 mt-2 leading-relaxed">
+                            Gian hàng phát sinh <span class="font-medium tabular-nums">1</span> đơn hàng bị hủy trên tổng số <span class="font-medium tabular-nums">4</span> đơn nhận được trong tháng 10/2026.
+                        </p>
+                        <div class="mt-3 pt-3 border-t border-rose-200/60 flex items-center justify-between text-[11px] text-rose-700">
+                            <span>Mã gian hàng: #1</span>
+                            <span>Trạng thái: Cần kiểm toán</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 p-4 rounded-md border border-zinc-200 bg-zinc-50">
+                        <div class="text-xs font-medium text-zinc-700">Các gian hàng còn lại</div>
+                        <p class="text-xs text-zinc-500 mt-1">
+                            Apple Authorized Store, SamCenter, Sunhouse, Aristino đều có tỷ lệ hủy đơn ở mức <span class="font-medium tabular-nums text-zinc-700">0,00%</span> (Đạt chuẩn).
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-zinc-100 text-xs text-zinc-500">
+                    Ngưỡng kiểm soát chất lượng sàn: <span class="tabular-nums font-medium text-zinc-700">10,00%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white border border-zinc-200 rounded-lg p-6">
+                <div class="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100">
+                    <div>
+                        <h2 class="text-sm font-semibold text-zinc-900">Điện Thoại Đạt Chuẩn Đánh Giá (Truy Vấn 1)</h2>
+                        <p class="text-xs text-zinc-500 mt-0.5">Điểm đánh giá trung bình từ 4.5 sao trở lên</p>
+                    </div>
+                    <button onclick="showSqlModal(1)" class="text-xs text-zinc-500 hover:text-zinc-900 underline font-mono">
+                        Xem SQL
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="border-b border-zinc-200 text-zinc-500 uppercase tracking-wider text-[11px]">
+                            <tr>
+                                <th class="pb-2.5 font-medium">Tên Sản Phẩm</th>
+                                <th class="pb-2.5 font-medium">Thương Hiệu</th>
+                                <th class="pb-2.5 font-medium text-right">Lượt Đánh Giá</th>
+                                <th class="pb-2.5 font-medium text-right">Điểm Trung Bình</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100">
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 font-medium text-zinc-900">iPhone 15 Pro Max</td>
+                                <td class="py-3 text-zinc-600">Apple</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-700">2 lượt</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">5.0 / 5.0</td>
+                            </tr>
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 font-medium text-zinc-900">Samsung Galaxy S24 Ultra</td>
+                                <td class="py-3 text-zinc-600">Samsung</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-700">1 lượt</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">5.0 / 5.0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white border border-zinc-200 rounded-lg p-6">
+                <div class="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100">
+                    <div>
+                        <h2 class="text-sm font-semibold text-zinc-900">Đơn Hàng Khách Hàng Nguyễn Văn A (Truy Vấn 2)</h2>
+                        <p class="text-xs text-zinc-500 mt-0.5">Phép nối INNER JOIN đa bảng qua 2 đơn hàng</p>
+                    </div>
+                    <button onclick="showSqlModal(2)" class="text-xs text-zinc-500 hover:text-zinc-900 underline font-mono">
+                        Xem SQL
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="border-b border-zinc-200 text-zinc-500 uppercase tracking-wider text-[11px]">
+                            <tr>
+                                <th class="pb-2.5 font-medium">Mã Đơn</th>
+                                <th class="pb-2.5 font-medium">Sản Phẩm & Quy Cách</th>
+                                <th class="pb-2.5 font-medium text-right">SL</th>
+                                <th class="pb-2.5 font-medium text-right">Đơn Giá</th>
+                                <th class="pb-2.5 font-medium text-right">Thành Tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100">
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 tabular-nums font-medium text-zinc-900">#1</td>
+                                <td class="py-3 text-zinc-700">iPhone 15 Pro Max (Titan Tự Nhiên, 256GB)</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-700">10</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">29.990.000 ₫</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">299.900.000 ₫</td>
+                            </tr>
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 tabular-nums font-medium text-zinc-900">#2</td>
+                                <td class="py-3 text-zinc-700">iPhone 15 Pro Max (Titan Xanh, 512GB)</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-700">5</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">34.990.000 ₫</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">174.950.000 ₫</td>
+                            </tr>
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 tabular-nums font-medium text-zinc-900">#2</td>
+                                <td class="py-3 text-zinc-700">Samsung Galaxy S24 Ultra (Xám Titan, 256GB)</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-700">5</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">28.990.000 ₫</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">144.950.000 ₫</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white border border-zinc-200 rounded-lg p-6">
+                <div class="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100">
+                    <div>
+                        <h2 class="text-sm font-semibold text-zinc-900">Giá Bán Vượt Nhà Cung Cấp FPT (Truy Vấn 7)</h2>
+                        <p class="text-xs text-zinc-500 mt-0.5">Toán tử > ALL so với mức cao nhất của FPT (16.500.000 ₫)</p>
+                    </div>
+                    <button onclick="showSqlModal(7)" class="text-xs text-zinc-500 hover:text-zinc-900 underline font-mono">
+                        Xem SQL
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="border-b border-zinc-200 text-zinc-500 uppercase tracking-wider text-[11px]">
+                            <tr>
+                                <th class="pb-2.5 font-medium">Tên Mặt Hàng</th>
+                                <th class="pb-2.5 font-medium">Mã SKU</th>
+                                <th class="pb-2.5 font-medium">Màu Sắc / Size</th>
+                                <th class="pb-2.5 font-medium text-right">Giá Bán Niêm Yết</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100">
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 font-medium text-zinc-900">Laptop Dell XPS 15</td>
+                                <td class="py-3 font-mono text-zinc-600">DELL-XPS15-SLV-1TB</td>
+                                <td class="py-3 text-zinc-600">Bạc Platinum, 32GB-1TB</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">49.990.000 ₫</td>
+                            </tr>
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 font-medium text-zinc-900">iPhone 15 Pro Max</td>
+                                <td class="py-3 font-mono text-zinc-600">IP15PM-BLU-512</td>
+                                <td class="py-3 text-zinc-600">Titan Xanh, 512GB</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">34.990.000 ₫</td>
+                            </tr>
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 font-medium text-zinc-900">iPhone 15 Pro Max</td>
+                                <td class="py-3 font-mono text-zinc-600">IP15PM-NAT-256</td>
+                                <td class="py-3 text-zinc-600">Titan Tự Nhiên, 256GB</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">29.990.000 ₫</td>
+                            </tr>
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 font-medium text-zinc-900">Samsung Galaxy S24 Ultra</td>
+                                <td class="py-3 font-mono text-zinc-600">S24U-GRY-256</td>
+                                <td class="py-3 text-zinc-600">Xám Titan, 256GB</td>
+                                <td class="py-3 text-right tabular-nums font-semibold text-zinc-900">28.990.000 ₫</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white border border-zinc-200 rounded-lg p-6">
+                <div class="flex items-center justify-between pb-4 mb-4 border-b border-zinc-100">
+                    <div>
+                        <h2 class="text-sm font-semibold text-zinc-900">Khách Hàng Chưa Từng Đặt Hàng (Truy Vấn 6)</h2>
+                        <p class="text-xs text-zinc-500 mt-0.5">NOT EXISTS và DATEDIFF(CURDATE(), NgayDangKy) > 365</p>
+                    </div>
+                    <button onclick="showSqlModal(6)" class="text-xs text-zinc-500 hover:text-zinc-900 underline font-mono">
+                        Xem SQL
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="border-b border-zinc-200 text-zinc-500 uppercase tracking-wider text-[11px]">
+                            <tr>
+                                <th class="pb-2.5 font-medium">Mã KH</th>
+                                <th class="pb-2.5 font-medium">Họ Và Tên</th>
+                                <th class="pb-2.5 font-medium">Email</th>
+                                <th class="pb-2.5 font-medium text-right">Ngày Đăng Ký</th>
+                                <th class="pb-2.5 font-medium text-right">Số Ngày Hoạt Động</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-zinc-100">
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 tabular-nums font-medium text-zinc-900">#6</td>
+                                <td class="py-3 text-zinc-800 font-medium">Hoàng Văn Tuấn</td>
+                                <td class="py-3 text-zinc-600">hoangvantuan@gmail.com</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">10/05/2024</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-900 font-medium">> 900 ngày</td>
+                            </tr>
+                            <tr class="hover:bg-zinc-50 transition">
+                                <td class="py-3 tabular-nums font-medium text-zinc-900">#7</td>
+                                <td class="py-3 text-zinc-800 font-medium">Đỗ Thị Mai</td>
+                                <td class="py-3 text-zinc-600">dothimai@gmail.com</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-600">15/08/2024</td>
+                                <td class="py-3 text-right tabular-nums text-zinc-900 font-medium">> 820 ngày</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="sql-modal" class="fixed inset-0 bg-zinc-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-zinc-200 rounded-lg max-w-2xl w-full p-6 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
+                <h3 class="text-sm font-semibold text-zinc-900" id="sql-modal-title">Mã SQL Truy Vấn</h3>
+                <button onclick="closeSqlModal()" class="text-zinc-400 hover:text-zinc-600 text-lg leading-none">×</button>
+            </div>
+            <pre class="bg-zinc-950 text-zinc-100 p-4 rounded-md font-mono text-xs overflow-x-auto max-h-80 leading-relaxed" id="sql-modal-code"></pre>
+            <div class="flex justify-end pt-2">
+                <button onclick="closeSqlModal()" class="px-3 py-1.5 rounded-md bg-zinc-900 text-white text-xs font-medium hover:bg-zinc-800 transition">
+                    Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="border-t border-zinc-200 bg-white mt-12 py-5 text-center text-xs text-zinc-500">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>Hệ Thống Sàn Thương Mại Điện Tử & Kho Thông Minh</span>
+            <span class="tabular-nums">MySQL 8.0+ • InnoDB Engine • Chuẩn Hóa 3NF • Stripe/Linear Clean Design</span>
+        </div>
+    </footer>
+
+    <script>
+        const SQL_QUERIES = {
+            1: `SELECT 
+    sp.MaSanPham,
+    sp.TenSanPham,
+    sp.ThuongHieu,
+    dm.TenDanhMuc,
+    ROUND(AVG(dg.SoSao), 2) AS DiemDanhGiaTrungBinh,
+    COUNT(dg.MaDanhGia) AS SoLuotDanhGia
+FROM DanhMuc dm
+INNER JOIN SanPham sp ON dm.MaDanhMuc = sp.MaDanhMuc
+INNER JOIN BienTheSanPham bt ON sp.MaSanPham = bt.MaSanPham
+INNER JOIN DanhGia dg ON bt.MaBienThe = dg.MaBienThe
+WHERE dm.TenDanhMuc = 'Điện thoại'
+GROUP BY sp.MaSanPham, sp.TenSanPham, sp.ThuongHieu, dm.TenDanhMuc
+HAVING AVG(dg.SoSao) >= 4.5;`,
+
+            2: `SELECT 
+    kh.HoTen AS TenKhachHang,
+    dh.MaDonHang,
+    dh.NgayDatHang,
+    sp.TenSanPham,
+    bt.MauSac,
+    bt.KichCo,
+    ct.SoLuong,
+    ct.DonGia,
+    ct.ThanhTien
+FROM KhachHang kh
+INNER JOIN DonHang dh ON kh.MaKhachHang = dh.MaKhachHang
+INNER JOIN ChiTietDonHang ct ON dh.MaDonHang = ct.MaDonHang
+INNER JOIN BienTheSanPham bt ON ct.MaBienThe = bt.MaBienThe
+INNER JOIN SanPham sp ON bt.MaSanPham = sp.MaSanPham
+WHERE kh.HoTen = 'Nguyễn Văn A';`,
+
+            3: `SELECT 
+    gh.MaGianHang,
+    gh.TenGianHang,
+    COUNT(dh.MaDonHang) AS SoDonThanhCong,
+    SUM(dh.TongTienHang) AS TongTienHangGoc,
+    SUM(dh.SoTienGiam) AS TongTienGiamVoucher,
+    SUM(dh.TongTienHang - dh.SoTienGiam) AS DoanhThuThuan
+FROM GianHang gh
+INNER JOIN DonHang dh ON gh.MaGianHang = dh.MaGianHang
+WHERE dh.TrangThai <> 'Cancelled'
+  AND YEAR(dh.NgayDatHang) = 2026
+  AND MONTH(dh.NgayDatHang) = 10
+GROUP BY gh.MaGianHang, gh.TenGianHang
+ORDER BY DoanhThuThuan DESC;`,
+
+            4: `SELECT 
+    gh.MaGianHang,
+    gh.TenGianHang,
+    COUNT(dh.MaDonHang) AS TongSoDonHang,
+    SUM(CASE WHEN dh.TrangThai = 'Cancelled' THEN 1 ELSE 0 END) AS SoDonBiHuy,
+    ROUND((SUM(CASE WHEN dh.TrangThai = 'Cancelled' THEN 1.0 ELSE 0.0 END) / COUNT(dh.MaDonHang)) * 100, 2) AS TyLeHuyPercent
+FROM GianHang gh
+INNER JOIN DonHang dh ON gh.MaGianHang = dh.MaGianHang
+WHERE YEAR(dh.NgayDatHang) = 2026
+  AND MONTH(dh.NgayDatHang) = 10
+GROUP BY gh.MaGianHang, gh.TenGianHang
+HAVING (SUM(CASE WHEN dh.TrangThai = 'Cancelled' THEN 1.0 ELSE 0.0 END) / COUNT(dh.MaDonHang)) > 0.10;`,
+
+            5: `SELECT 
+    dm1.MaDanhMuc,
+    dm1.TenDanhMuc,
+    COALESCE(SUM(tk.SoLuongTonKho), 0) AS TongSoLuongTonKho
+FROM DanhMuc dm1
+LEFT JOIN DanhMuc dm2 ON dm2.DanhMucChaID = dm1.MaDanhMuc
+LEFT JOIN SanPham sp ON (sp.MaDanhMuc = dm1.MaDanhMuc OR sp.MaDanhMuc = dm2.MaDanhMuc)
+LEFT JOIN BienTheSanPham bt ON sp.MaSanPham = bt.MaSanPham
+LEFT JOIN TonKho tk ON bt.MaBienThe = tk.MaBienThe
+WHERE dm1.DanhMucChaID IS NULL
+GROUP BY dm1.MaDanhMuc, dm1.TenDanhMuc
+ORDER BY TongSoLuongTonKho DESC;`,
+
+            6: `SELECT 
+    kh.MaKhachHang,
+    kh.HoTen,
+    kh.Email,
+    kh.SoDienThoai,
+    kh.NgayDangKy,
+    DATEDIFF(CURDATE(), kh.NgayDangKy) AS SoNgayDangKy
+FROM KhachHang kh
+WHERE DATEDIFF(CURDATE(), kh.NgayDangKy) > 365
+  AND NOT EXISTS (
+      SELECT 1
+      FROM DonHang dh
+      WHERE dh.MaKhachHang = kh.MaKhachHang
+  );`,
+
+            7: `SELECT 
+    sp.TenSanPham,
+    bt.MaBienThe,
+    bt.SKU,
+    bt.MauSac,
+    bt.KichCo,
+    bt.GiaBan
+FROM BienTheSanPham bt
+INNER JOIN SanPham sp ON bt.MaSanPham = sp.MaSanPham
+WHERE bt.GiaBan > ALL (
+    SELECT bt_sub.GiaBan
+    FROM BienTheSanPham bt_sub
+    INNER JOIN SanPham sp_sub ON bt_sub.MaSanPham = sp_sub.MaSanPham
+    INNER JOIN NhaCungCap ncc ON sp_sub.MaNhaCungCap = ncc.MaNhaCungCap
+    WHERE ncc.TenNhaCungCap = 'Công ty TNHH Phân phối FPT'
+)
+ORDER BY bt.GiaBan DESC;`,
+
+            8: `WITH CTE_DoanhThuNgay AS (
+    SELECT 
+        DATE(dh.NgayDatHang) AS Ngay,
+        SUM(dh.TongThanhToan) AS DoanhThuNgay
+    FROM DonHang dh
+    WHERE dh.TrangThai <> 'Cancelled'
+      AND YEAR(dh.NgayDatHang) = 2026
+      AND MONTH(dh.NgayDatHang) = 10
+    GROUP BY DATE(dh.NgayDatHang)
+),
+CTE_LuyKe AS (
+    SELECT 
+        Ngay,
+        DoanhThuNgay,
+        SUM(DoanhThuNgay) OVER (
+            PARTITION BY YEAR(Ngay), MONTH(Ngay)
+            ORDER BY Ngay ASC
+            ROWS UNBOUNDED PRECEDING
+        ) AS DoanhThuLuyKe
+    FROM CTE_DoanhThuNgay
+)
+SELECT 
+    Ngay,
+    DoanhThuNgay,
+    DoanhThuLuyKe,
+    CASE 
+        WHEN DoanhThuLuyKe >= 1000000000.00 
+             AND COALESCE(LAG(DoanhThuLuyKe, 1) OVER (ORDER BY Ngay ASC), 0) < 1000000000.00 
+        THEN 'Mốc đầu tiên đạt ngưỡng 1 tỷ VNĐ'
+        WHEN DoanhThuLuyKe >= 1000000000.00 THEN 'Trên ngưỡng 1 tỷ VNĐ'
+        ELSE 'Chưa đạt 1 tỷ VNĐ'
+    END AS TrangThaiCotMoc
+FROM CTE_LuyKe
+ORDER BY Ngay ASC;`
+        };
+
+        const WAREHOUSES = [
+            { id: 1, name: "Kho Tổng Hà Nội - KCN Đài Tư", code: "KHO-HN" },
+            { id: 2, name: "Kho Phía Nam - KCN Tân Bình", code: "KHO-HCM" },
+            { id: 3, name: "Kho Trung Chuyển Đà Nẵng", code: "KHO-DN" }
+        ];
+
+        const VARIANTS = [
+            { id: 1, name: "iPhone 15 Pro Max", color: "Titan Tự Nhiên", size: "256GB", sku: "IP15PM-NAT-256", price: 29990000, catId: 1 },
+            { id: 2, name: "iPhone 15 Pro Max", color: "Titan Xanh", size: "512GB", sku: "IP15PM-BLU-512", price: 34990000, catId: 1 },
+            { id: 3, name: "Samsung Galaxy S24 Ultra", color: "Xám Titan", size: "256GB", sku: "S24U-GRY-256", price: 28990000, catId: 1 },
+            { id: 4, name: "Xiaomi Redmi Note 13", color: "Đen Bán Dạ", size: "128GB", sku: "XIAOMI-RN13-BLK-128", price: 4890000, catId: 1 },
+            { id: 5, name: "Xiaomi Redmi Note 13", color: "Xanh Băng Tuyết", size: "256GB", sku: "XIAOMI-RN13-BLU-256", price: 5990000, catId: 1 },
+            { id: 6, name: "Laptop Dell XPS 15", color: "Bạc Platinum", size: "32GB-1TB", sku: "DELL-XPS15-SLV-1TB", price: 49990000, catId: 1 },
+            { id: 7, name: "Laptop Asus Vivobook 15", color: "Bạc Ánh Trăng", size: "16GB-512GB", sku: "ASUS-VIVO15-SLV-512", price: 16500000, catId: 1 },
+            { id: 8, name: "Áo Sơ Mi Nam Công Sở", color: "Trắng", size: "L", sku: "ARI-SOMI-WHT-L", price: 650000, catId: 2 },
+            { id: 9, name: "Nồi Chiên Không Dầu Sunhouse", color: "Đen Bóng", size: "6L", sku: "SUN-AF60-BLK-6L", price: 1850000, catId: 3 },
+            { id: 10, name: "Củ Sạc Nhanh Anker 65W GaN", color: "Đen Nhám", size: "65W", sku: "ANK-65W-BLK", price: 890000, catId: 1 }
+        ];
+
+        let inventory = [
+            { whId: 1, varId: 1, stock: 156, lastDeduct: { prev: 160, deducted: 4 } },
+            { whId: 2, varId: 1, stock: 85 },
+            { whId: 1, varId: 2, stock: 60 },
+            { whId: 2, varId: 3, stock: 95 },
+            { whId: 1, varId: 4, stock: 200 },
+            { whId: 3, varId: 5, stock: 150 },
+            { whId: 1, varId: 6, stock: 40 },
+            { whId: 2, varId: 7, stock: 75 },
+            { whId: 1, varId: 8, stock: 300 },
+            { whId: 2, varId: 9, stock: 180 }
+        ];
+
+        const dailyLabels = ['05/10', '10/10', '15/10', '18/10', '20/10', '22/10', '25/10', '29/10'];
+        let cumulativeData = [279.9, 579.8, 849.74, 856.24, 1046.17, 1055.42, 1220.42, 1244.87];
+
+        let chartInstance = null;
+        let streamInterval = null;
+
+        window.onload = function() {
+            populateOptions();
+            renderStockTable();
+            updateDeductStockDisplay();
+            initChart();
+        };
+
+        function populateOptions() {
+            const dSku = document.getElementById('manual-deduct-sku');
+            const rSku = document.getElementById('manual-restock-sku');
+            const tSku = document.getElementById('manual-trans-sku');
+
+            dSku.innerHTML = '';
+            rSku.innerHTML = '';
+            tSku.innerHTML = '';
+
+            VARIANTS.forEach(v => {
+                const optText = v.sku + ' - ' + v.name + ' (' + v.color + ')';
+                dSku.add(new Option(optText, v.id));
+                rSku.add(new Option(optText, v.id));
+                tSku.add(new Option(optText, v.id));
+            });
+        }
+
+        function formatCurrency(val) {
+            return Number(val).toLocaleString('vi-VN') + ' ₫';
+        }
+
+        function getWarehouse(id) {
+            return WAREHOUSES.find(w => w.id === parseInt(id));
+        }
+
+        function getVariant(id) {
+            return VARIANTS.find(v => v.id === parseInt(id));
+        }
+
+        function getInvItem(whId, varId) {
+            return inventory.find(i => i.whId === parseInt(whId) && i.varId === parseInt(varId));
+        }
+
+        function updateDeductStockDisplay() {
+            const whId = parseInt(document.getElementById('manual-deduct-wh').value);
+            const varId = parseInt(document.getElementById('manual-deduct-sku').value);
+            const item = getInvItem(whId, varId);
+            const displayEl = document.getElementById('manual-deduct-avail');
+            if (item) {
+                if (item.lastDeduct) {
+                    displayEl.innerHTML = `<span class="text-zinc-900 font-bold">${item.stock} cái</span> <span class="text-rose-600 text-[11px] ml-1">(${item.lastDeduct.prev} - ${item.lastDeduct.deducted})</span>`;
+                } else {
+                    displayEl.innerText = item.stock + ' cái';
+                }
+                displayEl.className = 'bg-white border border-zinc-200 rounded px-2.5 py-1.5 text-zinc-900 font-mono text-xs font-semibold';
+            } else {
+                displayEl.innerText = '0 cái (Hết)';
+                displayEl.className = 'bg-white border border-rose-200 rounded px-2.5 py-1.5 text-rose-600 font-mono text-xs font-semibold';
+            }
+        }
+
+        function renderStockTable() {
+            const tbody = document.getElementById('stock-tbody');
+            const kw = document.getElementById('filter-keyword').value.toLowerCase().trim();
+            tbody.innerHTML = '';
+
+            let totalStock = 0;
+            let catStock = { 1: 0, 2: 0, 3: 0 };
+
+            inventory.forEach(item => {
+                totalStock += item.stock;
+                const wh = getWarehouse(item.whId);
+                const v = getVariant(item.varId);
+                if (catStock[v.catId] !== undefined) {
+                    catStock[v.catId] += item.stock;
+                }
+
+                if (kw) {
+                    const matchName = v.name.toLowerCase().includes(kw);
+                    const matchSku = v.sku.toLowerCase().includes(kw);
+                    const matchWh = wh ? wh.name.toLowerCase().includes(kw) : false;
+                    if (!matchName && !matchSku && !matchWh) return;
+                }
+
+                const isLow = item.stock < 50;
+                let stockCellHtml = '';
+                if (item.lastDeduct) {
+                    stockCellHtml = `
+                        <div class="flex flex-col items-end">
+                            <span class="tabular-nums font-semibold ${isLow ? 'text-rose-600 font-bold' : 'text-zinc-900'}">${item.stock}</span>
+                            <span class="inline-flex items-center text-[11px] font-mono font-medium text-rose-600 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded mt-0.5" title="Đã xuất ${item.lastDeduct.deducted} sản phẩm (Tồn cũ ${item.lastDeduct.prev} - Xuất ${item.lastDeduct.deducted} = ${item.stock})">
+                                ${item.lastDeduct.prev} - ${item.lastDeduct.deducted}
+                            </span>
+                        </div>
+                    `;
+                } else {
+                    stockCellHtml = `
+                        <span class="tabular-nums font-semibold ${isLow ? 'text-rose-600 font-bold' : 'text-zinc-900'}">${item.stock}</span>
+                    `;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-zinc-50 transition';
+                tr.innerHTML = `
+                    <td class="py-3 font-medium text-zinc-800">${wh ? wh.name : 'Kho #' + item.whId}</td>
+                    <td class="py-3 font-medium text-zinc-900">${v.name}</td>
+                    <td class="py-3 font-mono text-zinc-600">${v.sku}</td>
+                    <td class="py-3 text-zinc-600">${v.color} - ${v.size}</td>
+                    <td class="py-3 text-right tabular-nums text-zinc-700">${formatCurrency(v.price)}</td>
+                    <td class="py-3 text-right">
+                        ${stockCellHtml}
+                    </td>
+                    <td class="py-3 text-center">
+                        <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-medium border ${isLow ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}">
+                            ${isLow ? 'Tồn thấp (< 50)' : 'An toàn'}
+                        </span>
+                    </td>
+                    <td class="py-3 text-right">
+                        <button onclick="quickDeduct(${item.whId}, ${item.varId}, 1)" title="Trừ 1 cái" class="px-2 py-0.5 rounded bg-zinc-100 hover:bg-rose-100 text-zinc-800 hover:text-rose-700 border border-zinc-200 text-[11px] font-mono font-medium">-1</button>
+                        <button onclick="quickRestock(${item.whId}, ${item.varId}, 10)" title="Cộng 10 cái" class="px-2 py-0.5 rounded bg-zinc-100 hover:bg-emerald-100 text-zinc-800 hover:text-emerald-700 border border-zinc-200 text-[11px] font-mono font-medium ml-1">+10</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('kpi-stock').innerText = totalStock.toLocaleString('vi-VN');
+            document.getElementById('total-stock-count').innerText = totalStock.toLocaleString('vi-VN');
+
+            const pct1 = totalStock > 0 ? ((catStock[1] / totalStock) * 100).toFixed(1) : 0;
+            const pct2 = totalStock > 0 ? ((catStock[2] / totalStock) * 100).toFixed(1) : 0;
+            const pct3 = totalStock > 0 ? ((catStock[3] / totalStock) * 100).toFixed(1) : 0;
+
+            document.getElementById('cat-stock-1').innerText = catStock[1].toLocaleString('vi-VN') + ' sản phẩm (' + pct1 + '%)';
+            document.getElementById('cat-bar-1').style.width = pct1 + '%';
+            updateDeductStockDisplay();
+        }
+
+        function handleManualDeduct() {
+            const whId = parseInt(document.getElementById('manual-deduct-wh').value);
+            const varId = parseInt(document.getElementById('manual-deduct-sku').value);
+            const qty = parseInt(document.getElementById('manual-deduct-qty').value);
+
+            if (isNaN(qty) || qty <= 0) {
+                showNotice('Số lượng đơn hàng phải lớn hơn 0.', 'ERROR');
+                return;
+            }
+
+            const item = getInvItem(whId, varId);
+            const wh = getWarehouse(whId);
+            const v = getVariant(varId);
+
+            if (!item || item.stock < qty) {
+                const avail = item ? item.stock : 0;
+                showNotice('<strong>[MYSQL TRIGGER EXCEPTION - SQLSTATE 45000]</strong>: So luong ton kho khong du de xac nhan don hang. Đơn hàng yêu cầu ' + qty + ' cái [' + v.sku + '] tại [' + (wh ? wh.name : whId) + '], nhưng tồn kho khả dụng chỉ còn ' + avail + ' cái. Giao dịch bị tự động ROLLBACK.', 'ERROR');
+                return;
+            }
+
+            const prev = item.stock;
+            item.stock -= qty;
+            item.lastDeduct = { prev: prev, deducted: qty };
+            renderStockTable();
+            showNotice('<strong>[TRIGGER THÀNH CÔNG]</strong> Đơn hàng chuyển sang DaXacNhan: Trigger trg_CapNhatTonKhoKhiXacNhan đã tự động trừ ' + qty + ' cái ' + v.sku + ' tại ' + (wh ? wh.name : whId) + '. Tồn kho: ' + prev + ' - ' + qty + ' = ' + item.stock + ' cái.', 'SUCCESS');
+        }
+
+        function handleManualRestock() {
+            const whId = parseInt(document.getElementById('manual-restock-wh').value);
+            const varId = parseInt(document.getElementById('manual-restock-sku').value);
+            const qty = parseInt(document.getElementById('manual-restock-qty').value);
+
+            if (isNaN(qty) || qty <= 0) {
+                showNotice('Số lượng nhập bổ sung phải lớn hơn 0.', 'ERROR');
+                return;
+            }
+
+            let item = getInvItem(whId, varId);
+            const wh = getWarehouse(whId);
+            const v = getVariant(varId);
+
+            if (!item) {
+                item = { whId: whId, varId: varId, stock: qty };
+                inventory.push(item);
+            } else {
+                item.stock += qty;
+            }
+
+            renderStockTable();
+            showNotice('<strong>[NHẬP KHO THÀNH CÔNG]</strong> Đã lập phiếu nhập kho: +' + qty + ' cái ' + v.sku + ' vào ' + (wh ? wh.name : whId) + '. Tồn hiện tại: ' + item.stock + ' cái.', 'SUCCESS');
+        }
+
+        function handleManualTransfer() {
+            const fromWhId = parseInt(document.getElementById('manual-trans-from').value);
+            const toWhId = parseInt(document.getElementById('manual-trans-to').value);
+            const varId = parseInt(document.getElementById('manual-trans-sku').value);
+            const qty = parseInt(document.getElementById('manual-trans-qty').value);
+
+            if (fromWhId === toWhId) {
+                showNotice('Kho xuất và kho nhận không được trùng nhau.', 'ERROR');
+                return;
+            }
+
+            if (isNaN(qty) || qty <= 0) {
+                showNotice('Số lượng điều chuyển phải lớn hơn 0.', 'ERROR');
+                return;
+            }
+
+            const fromWh = getWarehouse(fromWhId);
+            const toWh = getWarehouse(toWhId);
+            const v = getVariant(varId);
+            const fromItem = getInvItem(fromWhId, varId);
+
+            if (!fromItem || fromItem.stock < qty) {
+                const avail = fromItem ? fromItem.stock : 0;
+                showNotice('<strong>[ĐIỀU CHUYỂN THẤT BẠI]</strong> Kho nguồn [' + (fromWh ? fromWh.name : fromWhId) + '] chỉ còn ' + avail + ' cái ' + v.sku + ', không đủ ' + qty + ' cái để chuyển.', 'ERROR');
+                return;
+            }
+
+            const prevFrom = fromItem.stock;
+            fromItem.stock -= qty;
+            fromItem.lastDeduct = { prev: prevFrom, deducted: qty };
+            let toItem = getInvItem(toWhId, varId);
+            if (!toItem) {
+                toItem = { whId: toWhId, varId: varId, stock: qty };
+                inventory.push(toItem);
+            } else {
+                toItem.stock += qty;
+            }
+
+            renderStockTable();
+            showNotice('<strong>[ĐIỀU CHUYỂN HOÀN TẤT]</strong> Đã chuyển ' + qty + ' cái ' + v.sku + ' từ ' + (fromWh ? fromWh.name : fromWhId) + ' (Tồn: ' + prevFrom + ' - ' + qty + ' = ' + fromItem.stock + ') sang ' + (toWh ? toWh.name : toWhId) + ' trong một Transaction an toàn.', 'SUCCESS');
+        }
+
+        function quickDeduct(whId, varId, qty) {
+            const item = getInvItem(whId, varId);
+            const v = getVariant(varId);
+            if (!item || item.stock < qty) {
+                showNotice('Không đủ tồn kho để trừ nhanh.', 'ERROR');
+                return;
+            }
+            const prev = item.stock;
+            item.stock -= qty;
+            item.lastDeduct = { prev: prev, deducted: qty };
+            renderStockTable();
+            showNotice('Xuất nhanh: ' + prev + ' - ' + qty + ' = ' + item.stock + ' cái ' + v.sku + ' (đã xuất ' + qty + ' sản phẩm).', 'SUCCESS');
+        }
+
+        function quickRestock(whId, varId, qty) {
+            let item = getInvItem(whId, varId);
+            const v = getVariant(varId);
+            if (!item) {
+                item = { whId: whId, varId: varId, stock: qty };
+                inventory.push(item);
+            } else {
+                item.stock += qty;
+            }
+            renderStockTable();
+            showNotice('Nhập nhanh: +' + qty + ' cái ' + v.sku + '. Tồn mới: ' + item.stock, 'SUCCESS');
+        }
+
+        function toggleStream() {
+            const btn = document.getElementById('btn-stream');
+            const txt = document.getElementById('txt-stream');
+            const dot = document.getElementById('stream-dot');
+            const tag = document.getElementById('system-mode-tag');
+
+            if (streamInterval) {
+                clearInterval(streamInterval);
+                streamInterval = null;
+                txt.innerText = 'Bật Tự Động Demo';
+                btn.className = 'px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition flex items-center gap-1.5';
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+                tag.innerText = 'Thao tác thủ công';
+                tag.className = 'font-medium text-zinc-900 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200';
+                showNotice('Đã dừng chế độ tự động chạy demo.', 'INFO');
+            } else {
+                txt.innerText = 'Dừng Tự Động Demo';
+                btn.className = 'px-3 py-1.5 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium transition flex items-center gap-1.5';
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-white animate-pulse';
+                tag.innerText = 'Đang tự động phát sinh giao dịch (Live Stream)';
+                tag.className = 'font-medium text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 animate-pulse';
+                showNotice('Bắt đầu chế độ tự động mô phỏng đơn hàng mỗi 2,5 giây...', 'SUCCESS');
+
+                streamInterval = setInterval(() => {
+                    const rand = inventory[Math.floor(Math.random() * inventory.length)];
+                    const v = getVariant(rand.varId);
+                    const wh = getWarehouse(rand.whId);
+
+                    if (rand.stock >= 5) {
+                        const sub = Math.floor(Math.random() * 3) + 2;
+                        const prev = rand.stock;
+                        rand.stock -= sub;
+                        rand.lastDeduct = { prev: prev, deducted: sub };
+                        showNotice('<strong>[TỰ ĐỘNG DUYỆT ĐƠN]</strong> Trigger trừ -' + sub + ' cái [' + v.sku + '] tại ' + (wh ? wh.name : '') + '. Tồn kho: ' + prev + ' - ' + sub + ' = ' + rand.stock + ' cái.', 'SUCCESS');
+                    } else {
+                        const add = 40;
+                        rand.stock += add;
+                        delete rand.lastDeduct;
+                        showNotice('<strong>[TỰ ĐỘNG BỔ SUNG]</strong> Tồn kho cạn kiệt, tự động nhập +' + add + ' cái [' + v.sku + '] vào ' + (wh ? wh.name : '') + '.', 'INFO');
+                    }
+                    renderStockTable();
+                }, 2500);
+            }
+        }
+
+        function resetAllData() {
+            if (streamInterval) toggleStream();
+            inventory = [
+                { whId: 1, varId: 1, stock: 156, lastDeduct: { prev: 160, deducted: 4 } },
+                { whId: 2, varId: 1, stock: 85 },
+                { whId: 1, varId: 2, stock: 60 },
+                { whId: 2, varId: 3, stock: 95 },
+                { whId: 1, varId: 4, stock: 200 },
+                { whId: 3, varId: 5, stock: 150 },
+                { whId: 1, varId: 6, stock: 40 },
+                { whId: 2, varId: 7, stock: 75 },
+                { whId: 1, varId: 8, stock: 300 },
+                { whId: 2, varId: 9, stock: 180 }
+            ];
+            renderStockTable();
+            closeNotice();
+            showNotice('Đã khôi phục toàn bộ số liệu về dữ liệu gốc ban đầu trong file 02_seed_data.sql.', 'SUCCESS');
+        }
+
+        function showNotice(msg, type) {
+            const box = document.getElementById('notice-box');
+            const content = document.getElementById('notice-content');
+            const txt = document.getElementById('notice-text');
+
+            txt.innerHTML = msg;
+            if (type === 'ERROR') {
+                content.className = 'p-3.5 rounded-md border text-xs font-mono flex items-start justify-between bg-rose-50 border-rose-200 text-rose-800';
+            } else if (type === 'SUCCESS') {
+                content.className = 'p-3.5 rounded-md border text-xs font-mono flex items-start justify-between bg-emerald-50 border-emerald-200 text-emerald-800';
+            } else {
+                content.className = 'p-3.5 rounded-md border text-xs font-mono flex items-start justify-between bg-zinc-100 border-zinc-200 text-zinc-800';
+            }
+            box.classList.remove('hidden');
+        }
+
+        function closeNotice() {
+            document.getElementById('notice-box').classList.add('hidden');
+        }
+
+        function showSqlModal(queryId) {
+            document.getElementById('sql-modal-title').innerText = 'Mã Nguồn SQL Truy Vấn #' + queryId + ' (03_queries.sql)';
+            document.getElementById('sql-modal-code').innerText = SQL_QUERIES[queryId] || '';
+            document.getElementById('sql-modal').classList.remove('hidden');
+        }
+
+        function closeSqlModal() {
+            document.getElementById('sql-modal').classList.add('hidden');
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dailyLabels,
+                    datasets: [
+                        {
+                            label: 'Doanh Thu Lũy Kế (Triệu VNĐ)',
+                            data: cumulativeData,
+                            borderColor: '#18181B',
+                            backgroundColor: 'rgba(24, 24, 27, 0.03)',
+                            fill: true,
+                            borderWidth: 2,
+                            tension: 0.15,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#FFFFFF',
+                            pointBorderColor: '#18181B',
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 6,
+                            pointHoverBackgroundColor: '#18181B',
+                            pointHoverBorderColor: '#FFFFFF'
+                        },
+                        {
+                            label: 'Ngưỡng 1 Tỷ VNĐ',
+                            data: [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000],
+                            borderColor: '#DC2626',
+                            borderWidth: 1.5,
+                            borderDash: [5, 5],
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                boxWidth: 12,
+                                boxHeight: 12,
+                                color: '#71717A',
+                                font: { family: 'Inter', size: 11 }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#FFFFFF',
+                            titleColor: '#71717A',
+                            bodyColor: '#09090B',
+                            borderColor: '#E4E4E7',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.datasetIndex === 0) {
+                                        const val = context.parsed.y;
+                                        const isTarget = context.dataIndex === 4;
+                                        return (isTarget ? 'Mốc chạm ngưỡng 1 tỷ: ' : 'Lũy kế: ') + val.toLocaleString('vi-VN') + ' Triệu VNĐ';
+                                    }
+                                    return 'Ngưỡng mục tiêu: 1.000 Triệu VNĐ';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 200,
+                            max: 1300,
+                            grid: {
+                                color: '#F4F4F5',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#A1A1AA',
+                                font: { family: 'Inter', size: 11 },
+                                callback: function(val) {
+                                    return val + ' Tr';
+                                }
+                            }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: '#71717A',
+                                font: { family: 'Inter', size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
