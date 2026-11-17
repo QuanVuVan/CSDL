@@ -1,4 +1,5 @@
--- Active: 1794808148472@@127.0.0.1@3306@phpmyadminl
+-- Active: 1794827011207@@127.0.0.1@3306@ecommercesmartwarehouse
+
 USE EcommerceSmartWarehouse;
 
 SELECT 
@@ -66,10 +67,10 @@ SELECT
     dm1.TenDanhMuc,
     COALESCE(SUM(tk.SoLuongTonKho), 0) AS TongSoLuongTonKho
 FROM DanhMuc dm1
-LEFT JOIN DanhMuc dm2 ON dm2.DanhMucChaID = dm1.MaDanhMuc
-LEFT JOIN SanPham sp ON (sp.MaDanhMuc = dm1.MaDanhMuc OR sp.MaDanhMuc = dm2.MaDanhMuc)
-LEFT JOIN BienTheSanPham bt ON sp.MaSanPham = bt.MaSanPham
-LEFT JOIN TonKho tk ON bt.MaBienThe = tk.MaBienThe
+LEFT OUTER JOIN DanhMuc dm2 ON dm2.DanhMucChaID = dm1.MaDanhMuc
+LEFT OUTER JOIN SanPham sp ON (sp.MaDanhMuc = dm1.MaDanhMuc OR sp.MaDanhMuc = dm2.MaDanhMuc)
+LEFT OUTER JOIN BienTheSanPham bt ON sp.MaSanPham = bt.MaSanPham
+LEFT OUTER JOIN TonKho tk ON bt.MaBienThe = tk.MaBienThe
 WHERE dm1.DanhMucChaID IS NULL
 GROUP BY dm1.MaDanhMuc, dm1.TenDanhMuc
 ORDER BY TongSoLuongTonKho DESC;
@@ -141,3 +142,18 @@ SELECT
     END AS TrangThaiCotMoc
 FROM CTE_LuyKe
 ORDER BY Ngay ASC;
+-- Xem danh mục phân cấp cha - con
+SELECT 
+    dm.MaDanhMuc,
+    dm.TenDanhMuc,
+    dm.DanhMucChaID,
+    cha.TenDanhMuc AS TenDanhMucCha,
+    CASE 
+        WHEN dm.DanhMucChaID IS NULL THEN 'Cấp 1 (Gốc)'
+        ELSE 'Cấp 2 (Con)'
+    END AS CapBac
+FROM DanhMuc dm
+LEFT JOIN DanhMuc cha ON dm.DanhMucChaID = cha.MaDanhMuc;
+
+-- Xem toàn bộ bảng DanhMuc
+SELECT * FROM DanhMuc;
