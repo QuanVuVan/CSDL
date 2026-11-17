@@ -155,5 +155,18 @@ SELECT
 FROM DanhMuc dm
 LEFT JOIN DanhMuc cha ON dm.DanhMucChaID = cha.MaDanhMuc;
 
--- Xem toàn bộ bảng DanhMuc
+-- Xem toàn bộ dữ liệu trong các bảng
 SELECT * FROM DanhMuc;
+SELECT * FROM SanPham;
+SELECT * FROM BienTheSanPham;
+SELECT * FROM TonKho;
+SELECT * FROM DonHang;
+SELECT * FROM ChiTietDonHang;
+SELECT * FROM KhachHang;
+SELECT * FROM DanhGia;
+SELECT * FROM GianHang;
+SELECT * FROM NhaCungCap;
+SELECT * FROM Voucher;
+SELECT * FROM VanChuyen;
+SELECT * FROM ThanhToan;
+SELECT * FROM KhoHang;

@@ -1,4 +1,4 @@
--- Active: 1794827011207@@127.0.0.1@3306@mysql
+-- Active: 1794827011207@@127.0.0.1@3306@ecommercesmartwarehouse
 
 DROP DATABASE IF EXISTS EcommerceSmartWarehouse;
 CREATE DATABASE EcommerceSmartWarehouse CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
