@@ -33,6 +33,9 @@ Hệ thống được thiết kế đầy đủ 14 thực thể theo đúng chu�
 ├── 03_queries.sql               # 8 câu truy vấn phân tích nghiệp vụ từ cơ bản đến nâng cao (OLAP, CTE, Window Functions)
 ├── so_do_erd.html               # Sơ đồ ERD tương tác (Interactive Canvas) khổ lớn với ký pháp Crow's Foot
 ├── xem_erd.bat                  # Script khởi chạy nhanh sơ đồ ERD trên trình duyệt
+├── index.html                   # Dashboard demo (Live MySQL qua API, fallback mô phỏng)
+├── server.py                    # API server Python + pymysql kết nối MySQL
+├── chay_demo.bat                # Cài pymysql và khởi động server demo
 ├── BaoCao_ThietKe_CSDL.md       # Báo cáo thuyết minh kỹ thuật chi tiết
 └── README.md                    # Tài liệu hướng dẫn dự án
 ```
@@ -63,6 +66,17 @@ mysql -u root < 02_seed_data.sql
 ### Bước 4: Mở Sơ đồ ERD Trực quan
 * Nhấp đúp vào file `xem_erd.bat` hoặc mở trực tiếp `so_do_erd.html` bằng trình duyệt (Chrome, Edge, Firefox).
 * Sử dụng chuột để kéo thả, cuộn chuột để phóng to/thu nhỏ, hoặc chuyển đổi giữa 5 chế độ phân hệ chuyên biệt.
+
+### Bước 5: Chạy Dashboard kết nối MySQL
+* Nhấp đúp `chay_demo.bat` (tự cài `pymysql` nếu cần) hoặc chạy:
+
+```bash
+python server.py
+```
+
+* Mở `http://localhost:8080/index.html`.
+* Nếu API kết nối được MySQL, góc phải header hiện **“Live MySQL: ecommercesmartwarehouse”**; các thao tác xuất/nhập/điều chuyển sẽ ghi trực tiếp vào database.
+* Nếu chưa chạy server, dashboard tự chuyển sang **chế độ mô phỏng client** (không ghi DB).
 
 ---
 

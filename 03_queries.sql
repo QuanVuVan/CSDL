@@ -1,4 +1,4 @@
--- Active: 1794827011207@@127.0.0.1@3306@ecommercesmartwarehouse
+-- Active: 1794808148472@@127.0.0.1@3306@test
 
 USE EcommerceSmartWarehouse;
 
@@ -170,3 +170,5 @@ SELECT * FROM Voucher;
 SELECT * FROM VanChuyen;
 SELECT * FROM ThanhToan;
 SELECT * FROM KhoHang;
+
+SELECT MaKho, MaBienThe, SoLuongTonKho FROM TonKho WHERE MaKho = 1 AND MaBienThe = 1;

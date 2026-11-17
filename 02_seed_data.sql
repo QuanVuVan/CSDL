@@ -1,4 +1,4 @@
--- Active: 1794827011207@@127.0.0.1@3306@mysql
+-- Active: 1794808148472@@127.0.0.1@3306@test
 USE EcommerceSmartWarehouse;
 
 INSERT INTO DanhMuc (MaDanhMuc, TenDanhMuc, DanhMucChaID, MoTa) VALUES

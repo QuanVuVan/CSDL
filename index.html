@@ -26,6 +26,7 @@
                 <span class="text-sm font-semibold tracking-tight text-zinc-900">Bảng Điều Khiển Quản Trị & Kho Thông Minh</span>
                 <span class="text-zinc-300">/</span>
                 <span class="text-xs text-zinc-500 font-medium">EcommerceSmartWarehouse</span>
+                <span id="db-mode-badge" class="text-xs px-2 py-0.5 rounded font-mono font-medium bg-amber-50 text-amber-700 border border-amber-200">Đang kiểm tra MySQL...</span>
             </div>
             <div class="flex items-center gap-2">
                 <button onclick="toggleStream()" id="btn-stream" class="px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition flex items-center gap-1.5">
@@ -640,7 +641,7 @@
     <footer class="border-t border-zinc-200 bg-white mt-12 py-5 text-center text-xs text-zinc-500">
         <div class="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
             <span>Hệ Thống Sàn Thương Mại Điện Tử & Kho Thông Minh</span>
-            <span class="tabular-nums">MySQL 8.0+ • InnoDB Engine • Chuẩn Hóa 3NF • Stripe/Linear Clean Design</span>
+            <span class="tabular-nums">MySQL 8.0+ • InnoDB • 3NF • Live API (pymysql) + fallback mô phỏng</span>
         </div>
     </footer>
 
@@ -808,7 +809,7 @@ ORDER BY Ngay ASC;`
         ];
 
         let inventory = [
-            { whId: 1, varId: 1, stock: 156, lastDeduct: { prev: 160, deducted: 4 } },
+            { whId: 1, varId: 1, stock: 120 },
             { whId: 2, varId: 1, stock: 85 },
             { whId: 1, varId: 2, stock: 60 },
             { whId: 2, varId: 3, stock: 95 },
@@ -825,13 +826,80 @@ ORDER BY Ngay ASC;`
 
         let chartInstance = null;
         let streamInterval = null;
+        let isLiveMySQL = false;
 
         window.onload = function() {
             populateOptions();
             renderStockTable();
             updateDeductStockDisplay();
             initChart();
+            checkBackendStatus();
         };
+
+        function setDbBadge(live, text) {
+            const el = document.getElementById('db-mode-badge');
+            if (!el) return;
+            el.innerText = text;
+            el.className = live
+                ? 'text-xs px-2 py-0.5 rounded font-mono font-medium bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : 'text-xs px-2 py-0.5 rounded font-mono font-medium bg-amber-50 text-amber-700 border border-amber-200';
+        }
+
+        async function checkBackendStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                if (data && data.connected) {
+                    isLiveMySQL = true;
+                    setDbBadge(true, 'Live MySQL: ' + data.database);
+                    await loadLiveInventory();
+                    await loadLiveKpis();
+                } else {
+                    isLiveMySQL = false;
+                    setDbBadge(false, 'Mô phỏng (chưa nối MySQL)');
+                }
+            } catch (e) {
+                isLiveMySQL = false;
+                setDbBadge(false, 'Mô phỏng (chưa nối MySQL)');
+            }
+        }
+
+        async function loadLiveInventory() {
+            try {
+                const res = await fetch('/api/inventory');
+                const data = await res.json();
+                if (data.ok && Array.isArray(data.data)) {
+                    inventory = data.data.map(item => ({
+                        whId: item.MaKho,
+                        varId: item.MaBienThe,
+                        stock: item.SoLuongTonKho
+                    }));
+                    renderStockTable();
+                }
+            } catch (e) {
+                // giữ dữ liệu JS nếu API lỗi
+            }
+        }
+
+        async function loadLiveKpis() {
+            try {
+                const res = await fetch('/api/kpis');
+                const data = await res.json();
+                if (data.ok) {
+                    document.getElementById('kpi-revenue').innerText = Number(data.revenue).toLocaleString('vi-VN') + ' ₫';
+                    document.getElementById('kpi-stock').innerText = Number(data.stock).toLocaleString('vi-VN');
+                }
+            } catch (e) {}
+        }
+
+        async function postJson(path, payload) {
+            const res = await fetch(path, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            return res.json();
+        }
 
         function populateOptions() {
             const dSku = document.getElementById('manual-deduct-sku');
@@ -960,13 +1028,29 @@ ORDER BY Ngay ASC;`
             updateDeductStockDisplay();
         }
 
-        function handleManualDeduct() {
+        async function handleManualDeduct() {
             const whId = parseInt(document.getElementById('manual-deduct-wh').value);
             const varId = parseInt(document.getElementById('manual-deduct-sku').value);
             const qty = parseInt(document.getElementById('manual-deduct-qty').value);
 
             if (isNaN(qty) || qty <= 0) {
                 showNotice('Số lượng đơn hàng phải lớn hơn 0.', 'ERROR');
+                return;
+            }
+
+            if (isLiveMySQL) {
+                try {
+                    const data = await postJson('/api/deduct', { whId, varId, qty });
+                    if (!data.ok) {
+                        showNotice('<strong>[MYSQL]</strong> ' + data.error, 'ERROR');
+                        return;
+                    }
+                    await loadLiveInventory();
+                    await loadLiveKpis();
+                    showNotice('<strong>[MYSQL]</strong> ' + data.message + ' Tồn kho hiện tại: ' + data.newStock + ' cái.', 'SUCCESS');
+                } catch (e) {
+                    showNotice('Lỗi kết nối API MySQL: ' + e.message, 'ERROR');
+                }
                 return;
             }
 
@@ -987,13 +1071,29 @@ ORDER BY Ngay ASC;`
             showNotice('<strong>[TRIGGER THÀNH CÔNG]</strong> Đơn hàng chuyển sang DaXacNhan: Trigger trg_CapNhatTonKhoKhiXacNhan đã tự động trừ ' + qty + ' cái ' + v.sku + ' tại ' + (wh ? wh.name : whId) + '. Tồn kho: ' + prev + ' - ' + qty + ' = ' + item.stock + ' cái.', 'SUCCESS');
         }
 
-        function handleManualRestock() {
+        async function handleManualRestock() {
             const whId = parseInt(document.getElementById('manual-restock-wh').value);
             const varId = parseInt(document.getElementById('manual-restock-sku').value);
             const qty = parseInt(document.getElementById('manual-restock-qty').value);
 
             if (isNaN(qty) || qty <= 0) {
                 showNotice('Số lượng nhập bổ sung phải lớn hơn 0.', 'ERROR');
+                return;
+            }
+
+            if (isLiveMySQL) {
+                try {
+                    const data = await postJson('/api/restock', { whId, varId, qty });
+                    if (!data.ok) {
+                        showNotice('<strong>[MYSQL]</strong> ' + data.error, 'ERROR');
+                        return;
+                    }
+                    await loadLiveInventory();
+                    await loadLiveKpis();
+                    showNotice('<strong>[MYSQL]</strong> ' + data.message + ' Tồn kho hiện tại: ' + data.newStock + ' cái.', 'SUCCESS');
+                } catch (e) {
+                    showNotice('Lỗi kết nối API MySQL: ' + e.message, 'ERROR');
+                }
                 return;
             }
 
@@ -1012,7 +1112,7 @@ ORDER BY Ngay ASC;`
             showNotice('<strong>[NHẬP KHO THÀNH CÔNG]</strong> Đã lập phiếu nhập kho: +' + qty + ' cái ' + v.sku + ' vào ' + (wh ? wh.name : whId) + '. Tồn hiện tại: ' + item.stock + ' cái.', 'SUCCESS');
         }
 
-        function handleManualTransfer() {
+        async function handleManualTransfer() {
             const fromWhId = parseInt(document.getElementById('manual-trans-from').value);
             const toWhId = parseInt(document.getElementById('manual-trans-to').value);
             const varId = parseInt(document.getElementById('manual-trans-sku').value);
@@ -1025,6 +1125,24 @@ ORDER BY Ngay ASC;`
 
             if (isNaN(qty) || qty <= 0) {
                 showNotice('Số lượng điều chuyển phải lớn hơn 0.', 'ERROR');
+                return;
+            }
+
+            if (isLiveMySQL) {
+                try {
+                    const data = await postJson('/api/transfer', {
+                        fromWhId, toWhId, varId, qty
+                    });
+                    if (!data.ok) {
+                        showNotice('<strong>[MYSQL]</strong> ' + data.error, 'ERROR');
+                        return;
+                    }
+                    await loadLiveInventory();
+                    await loadLiveKpis();
+                    showNotice('<strong>[MYSQL]</strong> ' + data.message, 'SUCCESS');
+                } catch (e) {
+                    showNotice('Lỗi kết nối API MySQL: ' + e.message, 'ERROR');
+                }
                 return;
             }
 
@@ -1054,7 +1172,23 @@ ORDER BY Ngay ASC;`
             showNotice('<strong>[ĐIỀU CHUYỂN HOÀN TẤT]</strong> Đã chuyển ' + qty + ' cái ' + v.sku + ' từ ' + (fromWh ? fromWh.name : fromWhId) + ' (Tồn: ' + prevFrom + ' - ' + qty + ' = ' + fromItem.stock + ') sang ' + (toWh ? toWh.name : toWhId) + ' trong một Transaction an toàn.', 'SUCCESS');
         }
 
-        function quickDeduct(whId, varId, qty) {
+        async function quickDeduct(whId, varId, qty) {
+            if (isLiveMySQL) {
+                try {
+                    const data = await postJson('/api/deduct', { whId, varId, qty });
+                    if (!data.ok) {
+                        showNotice('<strong>[MYSQL]</strong> ' + data.error, 'ERROR');
+                        return;
+                    }
+                    await loadLiveInventory();
+                    await loadLiveKpis();
+                    showNotice('<strong>[MYSQL]</strong> ' + data.message + ' Tồn kho: ' + data.newStock + ' cái.', 'SUCCESS');
+                } catch (e) {
+                    showNotice('Lỗi kết nối API MySQL: ' + e.message, 'ERROR');
+                }
+                return;
+            }
+
             const item = getInvItem(whId, varId);
             const v = getVariant(varId);
             if (!item || item.stock < qty) {
@@ -1068,7 +1202,23 @@ ORDER BY Ngay ASC;`
             showNotice('Xuất nhanh: ' + prev + ' - ' + qty + ' = ' + item.stock + ' cái ' + v.sku + ' (đã xuất ' + qty + ' sản phẩm).', 'SUCCESS');
         }
 
-        function quickRestock(whId, varId, qty) {
+        async function quickRestock(whId, varId, qty) {
+            if (isLiveMySQL) {
+                try {
+                    const data = await postJson('/api/restock', { whId, varId, qty });
+                    if (!data.ok) {
+                        showNotice('<strong>[MYSQL]</strong> ' + data.error, 'ERROR');
+                        return;
+                    }
+                    await loadLiveInventory();
+                    await loadLiveKpis();
+                    showNotice('<strong>[MYSQL]</strong> ' + data.message + ' Tồn kho: ' + data.newStock + ' cái.', 'SUCCESS');
+                } catch (e) {
+                    showNotice('Lỗi kết nối API MySQL: ' + e.message, 'ERROR');
+                }
+                return;
+            }
+
             let item = getInvItem(whId, varId);
             const v = getVariant(varId);
             if (!item) {
@@ -1104,6 +1254,30 @@ ORDER BY Ngay ASC;`
                 tag.className = 'font-medium text-rose-700 bg-rose-50 px-2 py-0.5 rounded border border-rose-200 animate-pulse';
                 showNotice('Bắt đầu chế độ tự động mô phỏng đơn hàng mỗi 2,5 giây...', 'SUCCESS');
 
+                if (isLiveMySQL) {
+                    streamInterval = setInterval(async () => {
+                        if (!inventory.length) return;
+                        const rand = inventory[Math.floor(Math.random() * inventory.length)];
+                        try {
+                            const data = await postJson('/api/deduct', {
+                                whId: rand.whId,
+                                varId: rand.varId,
+                                qty: 2
+                            });
+                            if (data.ok) {
+                                await loadLiveInventory();
+                                await loadLiveKpis();
+                                showNotice('<strong>[MYSQL TỰ ĐỘNG]</strong> Đã tạo đơn và trừ 2 cái [' + data.newStock + ' còn lại].', 'SUCCESS');
+                            } else {
+                                showNotice('<strong>[MYSQL]</strong> ' + data.error, 'ERROR');
+                            }
+                        } catch (e) {
+                            showNotice('Lỗi kết nối API MySQL: ' + e.message, 'ERROR');
+                        }
+                    }, 2500);
+                    return;
+                }
+
                 streamInterval = setInterval(() => {
                     const rand = inventory[Math.floor(Math.random() * inventory.length)];
                     const v = getVariant(rand.varId);
@@ -1126,10 +1300,17 @@ ORDER BY Ngay ASC;`
             }
         }
 
-        function resetAllData() {
+        async function resetAllData() {
             if (streamInterval) toggleStream();
+            if (isLiveMySQL) {
+                await loadLiveInventory();
+                await loadLiveKpis();
+                closeNotice();
+                showNotice('Đã tải lại dữ liệu hiện tại từ MySQL.', 'SUCCESS');
+                return;
+            }
             inventory = [
-                { whId: 1, varId: 1, stock: 156, lastDeduct: { prev: 160, deducted: 4 } },
+                { whId: 1, varId: 1, stock: 120 },
                 { whId: 2, varId: 1, stock: 85 },
                 { whId: 1, varId: 2, stock: 60 },
                 { whId: 2, varId: 3, stock: 95 },
